@@ -467,7 +467,7 @@
 <!-- 音乐播放器 -->
 <audio id="bgMusic" loop>
     <!-- 将下面src替换为您的本地MP3文件路径 -->
-    <source src="C:\Users\wang\Desktop\流浪艺术家\佳怡和小方\爱情翻翻乐\music.mp3" type="audio/mpeg">
+    <source src="audio/music.mp3" controls> </audio>
 </audio>
 
 <!-- 胜利音效 -->
@@ -991,9 +991,7 @@
     
     // 播放胜利音效
     // 这里是实际代码实现
-    const winSound = new Audio();
-    // 由于无法访问您的本地文件，这里使用一个在线MP3示例
-    winSound.src =  "C:/Users/wang/Desktop/流浪艺术家/佳怡和小方/爱情翻翻乐/bgm.mp3";
+    const winSound = new Audio("audio/bgm.mp3");
     winSound.volume = 0.7;
         
         function playWinSound() {
