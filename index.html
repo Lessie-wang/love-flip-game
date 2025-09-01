@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>爱の翻翻乐by佳怡😉</title>
+    <title>爱の翻翻乐by佳怡</title>
     <style>
         * {
             margin: 0;
@@ -769,11 +769,11 @@
     // 游戏初始数据 - 修改为文字和图片组合
     const cardContents = [
         { text: "心跳异乡", image: "https://i.imgs.ovh/2025/09/01/wLcqU.jpeg" },
-        { text: "共生", image: "https://i.imgs.ovh/2025/09/01/wL4SC.md.jpeg" },
+        { text: "小丑鱼", image: "https://i.imgs.ovh/2025/09/01/wL4SC.md.jpeg" },
         { text: "第二粒纽扣", image: "https://i.imgs.ovh/2025/09/01/wRFl4.md.jpeg" },
         { text: "蒙面感冒侠", image: "https://i.imgs.ovh/2025/09/01/wLO9A.md.jpeg" },
         { text: "染回黑发时", image: "https://i.imgs.ovh/2025/09/01/wLyv4.md.jpeg" },
-        { text: "清水芙蓉", image: "https://i.imgs.ovh/2025/09/01/wLjZH.md.jpeg" },
+        { text: "剪刘海那晚", image: "https://i.imgs.ovh/2025/09/01/wLjZH.md.jpeg" },
         { text: "密室与艺术展", image: "https://i.imgs.ovh/2025/09/01/wLZpN.md.jpeg" },
         { text: "从前慢", image: "https://i.imgs.ovh/2025/09/01/wLFbF.md.jpeg" },
         { text: "十指十色", image: "https://i.imgs.ovh/2025/09/01/wLf4X.jpeg" },
@@ -784,7 +784,7 @@
         { text: "灵魂乐章", image: "https://i.imgs.ovh/2025/09/01/wVyv1.jpeg" },
         { text: "幻昼", image: "https://i.imgs.ovh/2025/09/01/wVVDC.jpeg" },
         { text: "小孩姐", image: "https://i.imgs.ovh/2025/09/01/wV9D9.jpeg" },
-        { text: "涂涂画画", image: "https://i.imgs.ovh/2025/09/01/wbeRr.jpeg" },
+        { text: "流浪艺术家", image: "https://i.imgs.ovh/2025/09/01/wbeRr.jpeg" },
         { text: "魔法师", image: "https://i.imgs.ovh/2025/09/01/wboRH.jpeg" }
     ];
     
@@ -834,8 +834,10 @@
         
         // 生成卡片对
         const totalPairs = (rows * cols) / 2;
-        const selectedContents = cardContents.slice(0, totalPairs);
-        cards = [...selectedContents, ...selectedContents];
+        const shuffledContents = [...cardContents]
+                .sort(() => Math.random() - 0.5)
+                .slice(0, totalPairs);
+        cards = [...shuffledContents, ...shuffledContents];
         
         // 洗牌算法
         for (let i = cards.length - 1; i > 0; i--) {
