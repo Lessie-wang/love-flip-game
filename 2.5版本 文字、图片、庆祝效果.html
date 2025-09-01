@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>双卡面爱の翻翻乐；待解决问题：1.游戏结束后出音效，原bgm暂停，下局游戏开始时bgm再开启</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: "FangSong", "仿宋", "仿宋_GB2312", serif;
+            font-weight: 2000;
+            background: linear-gradient(135deg, #ff9bc9, #c51b3d);
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            min-height: 100vh;
+            margin: 0;
+            padding: 20px;
+            color: #fff;
+            overflow: hidden;
+            position: relative;
+        }
+        
+        /* 背景闪烁效果 */
+        body::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-image: 
+                radial-gradient(circle at 20% 30%, rgba(255, 255, 255, 0.4) 2px, transparent 3px),
+                radial-gradient(circle at 80% 70%, rgba(255, 255, 255, 0.4) 1px, transparent 2px),
+                radial-gradient(circle at 40% 90%, rgba(255, 255, 255, 0.4) 3px, transparent 4px),
+                radial-gradient(circle at 70% 10%, rgba(255, 255, 255, 0.4) 2px, transparent 3px);
+            background-size: 300px 300px;
+            z-index: 1;
+            animation: twinkle 5s infinite alternate;
+        }
+        
+        @keyframes twinkle {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 0.8; }
+        }
+        
+        /* 飘落图案容器 */
+        .falling-items {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 2;
+            overflow: hidden;
+        }
+        
+        /* 飘落图案的样式 */
+        .falling-item {
+            position: absolute;
+            font-size: 24px;
+            pointer-events: none;
+            z-index: 2;
+            user-select: none;
+            opacity: 0;
+            text-shadow: 0 0 8px rgba(255, 255, 255, 0.8);
+            animation-timing-function: linear, ease-in-out;
+            animation-fill-mode: forwards;
+        }
+        
+        /* 飘落文字样式 */
+        .falling-text {
+            position: absolute;
+            font-size: 28px;
+            font-weight: bold;
+            color: #9bbafd;
+            text-shadow: 0 0 12px rgba(253, 177, 244, 0.9);
+            pointer-events: none;
+            z-index: 2;
+            user-select: none;
+            font-family: "FangSong", "仿宋", "仿宋_GB2312", serif;
+            opacity: 0;
+            animation-timing-function: linear;
+            animation-fill-mode: forwards;
+        }
+        
+        /* 游戏内容容器 */
+        .content {
+            position: relative;
+            z-index: 3;
+            width: 100%;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+        h1 {
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+            margin-bottom: 10px;
+            font-size: 2.8rem;
+        }
+        
+        .game-info {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px 25px;
+            border-radius: 10px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+            text-align: center;
+            font-family: "KaiTi", "楷体", "楷体_GB2312", serif;
+            width: 90%;
+            max-width: 500px;
+            color: #333;
+        }
+        
+        .game-board {
+            display: grid;
+            grid-template-columns: repeat(4, 1fr);
+            gap: 10px;
+            max-width: 500px;
+            margin: 0 auto;
+        }  
+        
+        /* 双卡面设计 */
+        .card {
+            width: 100px;
+            height: 100px;
+            perspective: 1000px;
+            cursor: pointer;
+            position: relative;
+        }
+        
+        .card-inner {
+            position: relative;
+            width: 100%;
+            height: 100%;
+            text-align: center;
+            transition: transform 0.6s;
+            transform-style: preserve-3d;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            border-radius: 8px;
+        }
+        
+        .card.flipped .card-inner {
+            transform: rotateY(180deg);
+        }
+
+        .card.matched {
+            /* 匹配后不翻转，保持正面朝上 */
+            cursor: default;
+        }
+
+        .card.matched .card-inner {
+            /* 匹配后不翻转，保持正面朝上。看看能不能翻转前是问号，匹配成功后变成爱心~*/
+            transform: rotateY(180deg);
+            opacity: 0.8;
+            cursor: default; 
+        }
+        .card-front, .card-back {
+            position: absolute;
+            width: 100%;
+            height: 100%;
+            -webkit-backface-visibility: hidden;
+            backface-visibility: hidden;
+            border-radius: 8px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            overflow: hidden;
+        }
+        
+        .card-front {
+            background: linear-gradient(135deg, #ff9bc9, #c51b3d);
+            border: 3px solid #fff;
+        }
+        
+        .card-front::before {
+            content: "❓";
+            font-size: 2.0rem;
+        }
+        
+        .card-back {
+            background-color: #fff;
+            color: #333;
+            transform: rotateY(180deg);
+            font-size: 1.2rem;
+            padding: 5px;
+            text-align: center;
+        }
+
+        .card.matched .card-front::before {
+            content: "💖";
+            font-size: 2.0rem;
+        }
+        
+        .card.matched .card-back {
+            background: linear-gradient(135deg, #fbf6f8, #e211a7);
+            color:transparent;
+        }
+
+        .card.matched .card-back > * {
+            display: none; /* 隐藏所有子元素 */
+
+        }
+
+        .card-image {
+            max-width: 60%;
+            max-height: 60%;
+            object-fit: contain;
+            margin-bottom: 5px;
+        }
+        
+        .card-text {
+            font-size: 0.9rem;
+            font-weight: bold;
+            text-align: center;
+            word-break: break-word;
+        }
+        
+        .controls {
+            margin-top: 20px;
+        }
+        
+        button {
+            background: #9b6ce2;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 50px;
+            font-size: 1rem;
+            cursor: pointer;
+            transition: all 0.3s;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+        }
+        
+        button:hover {
+            background: #c495cb;
+            transform: translateY(-2px);
+        }
+        
+        .difficulty {
+            margin: 15px 0;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.5);
+        }
+        
+        select {
+            padding: 8px 15px;
+            border-radius: 50px;
+            border: 2px solid #6e8efb;
+            background: rgba(255, 255, 255, 0.9);
+        }
+
+        /* 添加飘落动画 */
+        @keyframes fall {
+            0% {
+                transform: translateY(-100px) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            10% {
+                opacity: 0.9;
+            }
+            90% {
+                opacity: 0.7;
+            }
+            100% {
+                transform: translateY(100vh) translateX(var(--translate-x)) rotate(var(--rotate));
+                opacity: 0;
+            }
+        }
+        
+        @keyframes textFall {
+            0% {
+                transform: translateY(-150px) translateX(0) rotate(0deg);
+                opacity: 0;
+            }
+            20% {
+                opacity: 0.8;
+            }
+            80% {
+                opacity: 0.6;
+            }
+            100% {
+                transform: translateY(100vh) translateX(var(--translate-x)) rotate(var(--rotate));
+                opacity: 0;
+            }
+        }
+        
+        @keyframes sway {
+            0%, 100% {
+                transform: translateX(0px);
+            }
+            50% {
+                transform: translateX(var(--sway-distance));
+            }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 10px;
+            font-weight: bold;
+        }
+        
+        /* 音乐控制按钮样式 */
+        .music-control {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 10000;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 10px;
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(5px);
+            padding: 10px;
+            border-radius: 20px;
+            box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
+        }
+        
+        #musicToggle {
+            background: rgba(255, 105, 180, 0.8);
+            color: white;
+            border: none;
+            border-radius: 20px;
+            padding: 10px 15px;
+            cursor: pointer;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            font-size: 14px;
+            font-weight: bold;
+            transition: all 0.3s;
+            min-width: 120px;
+        }
+        
+        #musicToggle:hover {
+            background: rgba(255, 105, 180, 1);
+            transform: scale(1.05);
+        }
+        
+        .volume-control {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: rgba(255, 255, 255, 0.8);
+            border-radius: 15px;
+            padding: 5px 12px;
+        }
+        
+        .volume-control input {
+            width: 80px;
+            cursor: pointer;
+        }
+        
+        /* 胜利庆祝效果 */
+        .celebration {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            z-index: 1000;
+            display: none;
+        }
+        
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.8;
+        }
+        
+        /* 游戏结束庆祝页面 */
+        .celebration-modal {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 10000;
+            opacity: 0;
+            visibility: hidden;
+            transition: opacity 0.5s, visibility 0.5s;
+        }
+        
+        .celebration-modal.show {
+            opacity: 1;
+            visibility: visible;
+        }
+        
+        .celebration-content {
+            background: linear-gradient(135deg, #ff9bc9, #c51b3d);
+            padding: 40px;
+            border-radius: 20px;
+            text-align: center;
+            max-width: 90%;
+            width: 500px;
+            box-shadow: 0 0 30px rgba(255, 105, 180, 0.7);
+            position: relative;
+            overflow: hidden;
+            animation: pulse 2s infinite;
+        }
+        
+        @keyframes pulse {
+            0% { transform: scale(1); }
+            50% { transform: scale(1.03); }
+            100% { transform: scale(1); }
+        }
+        
+        .celebration-content h2 {
+            font-size: 2.5rem;
+            margin-bottom: 20px;
+            color: white;
+            text-shadow: 2px 2px 4px rgba(0, 0, 0, 0.3);
+        }
+        
+        .celebration-content p {
+            font-size: 1.5rem;
+            margin-bottom: 30px;
+            color: white;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.3);
+        }
+        
+        .celebration-stats {
+            display: flex;
+            justify-content: space-around;
+            margin: 20px 0;
+            font-size: 1.2rem;
+        }
+        
+        .celebration-stats span {
+            display: block;
+            font-weight: bold;
+            font-size: 1.5rem;
+            margin-top: 5px;
+        }
+        
+        .celebration-buttons {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 20px;
+        }
+        
+        .celebration-buttons button {
+            padding: 12px 25px;
+            font-size: 1.1rem;
+        }
+    </style>
+</head>
+    
+<body>
+<!-- 音乐播放器 -->
+<audio id="bgMusic" loop>
+    <!-- 将下面src替换为您的本地MP3文件路径 -->
+    <source src="C:\Users\wang\Desktop\流浪艺术家\佳怡和小方\爱情翻翻乐\music.mp3" type="audio/mpeg">
+</audio>
+
+<!-- 胜利音效 -->
+<audio id="winSound">
+    <source src="" type="audio/mpeg">
+</audio>
+
+<!-- 自动播放提示覆盖层 -->
+<div id="autoplayOverlay" style="position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.7); z-index: 9999; display: flex; justify-content: center; align-items: center; color: white; font-size: 24px; display: none;">
+    <div style="text-align: center; background: rgba(255,105,180,0.9); padding: 30px; border-radius: 15px; box-shadow: 0 0 20px rgba(0,0,0,0.5);">
+        <p>🎵 点击此处开启游戏音乐 🎵</p>
+        <button onclick="enableAudio()" style="background: rgb(243, 122, 122);font-family: KaiTi, 楷体, 楷体_GB2312, serif; border: none; padding: 10px 20px; border-radius: 25px; font-size: 18px; cursor: pointer; margin-top: 15px;">准备好了嘛？</button>
+    </div>
+</div>
+
+<!-- 音乐控制界面 -->
+<div class="music-control">
+    <button id="musicToggle">🔇 开启音乐</button>
+    <div class="volume-control">
+        <span>🔈</span>
+        <input type="range" id="volumeSlider" min="0" max="1" step="0.1" value="0.7">
+        <span>🔊</span>
+    </div>
+</div>
+
+<!-- 胜利庆祝效果 -->
+<div class="celebration" id="celebration"></div>
+
+<!-- 游戏结束庆祝页面 -->
+<div class="celebration-modal" id="celebrationModal">
+    <div class="celebration-content">
+        <h2>🎉 恭喜通关！ 🎉</h2>
+        <p>亲爱的寻爱探险家，你成功解锁了所有独家记忆！</p>
+        
+        <div class="celebration-stats">
+            <div>
+                用时<br>
+                <span id="celebrationTime">0</span>秒
+            </div>
+            <div>
+                步数<br>
+                <span id="celebrationMoves">0</span>步
+            </div>
+        </div>
+        
+        <p>不愧是佳怡看上的人呀！要继续保持这份用心哦~ 💖</p>
+        
+        <div class="celebration-buttons">
+            <button id="playAgain">再玩一次</button>
+            <button id="changeDifficulty">更换难度</button>
+        </div>
+    </div>
+</div>
+
+<!-- 飘落图案容器 -->
+<div class="falling-items" id="falling-items"></div>
+
+<!-- 游戏内容容器 -->
+<div class="content">
+    <h1>❤️ 爱の翻翻乐 ❤️</h1>
+    
+    <div class="game-info">
+        <p>亲爱的寻爱探险家🔍</p>
+        <p>翻开卡片，解锁我的独家记忆吧！</p>
+        <p>祝好运！希望爱神永远站她这边！🙋‍♀️</p>
+        <div class="stats">
+            <span>⏳用时: <span id="timer">0</span>秒</span>
+            <span>🔄移动: <span id="moves">0</span>步</span>
+        </div>
+    </div>
+    
+    <div class="difficulty">
+        <label for="difficulty">难度: </label>
+        <select id="difficulty">
+            <option value="easy">易如反掌（2x2）</option>
+            <option value="medium">小试牛刀（4x4）</option>
+            <option value="hard">佳怡严选(6x6)</option>
+        </select>
+    </div>
+    
+    <div class="game-board" id="game-board">
+        <!-- 卡片将通过JavaScript动态生成 -->
+    </div>
+    
+    <div class="controls">
+        <button id="restart">刷新记录？</button>
+    </div>
+</div>
+
+<script>
+    // 全局音乐状态
+    let musicPlaying = false;
+    
+    // 启用音频功能
+    function enableAudio() {
+        const bgMusic = document.getElementById('bgMusic');
+        const overlay = document.getElementById('autoplayOverlay');
+        const musicToggle = document.getElementById('musicToggle');
+        
+        // 尝试播放音乐
+        const playPromise = bgMusic.play();
+        
+        if (playPromise !== undefined) {
+            playPromise.then(() => {
+                // 播放成功
+                console.log('音乐自动播放成功');
+                musicToggle.textContent = '🔊 关闭音乐';
+                overlay.style.display = 'none';
+                musicPlaying = true;
+            }).catch(error => {
+                // 播放失败
+                console.log('自动播放失败:', error);
+                alert('自动播放失败，请手动点击音乐按钮开启');
+                overlay.style.display = 'none';
+            });
+        }
+    }
+    
+    // 音乐控制功能
+    document.addEventListener('DOMContentLoaded', function() {
+        const bgMusic = document.getElementById('bgMusic');
+        const musicToggle = document.getElementById('musicToggle');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const overlay = document.getElementById('autoplayOverlay');
+        
+        // 设置初始音量
+        bgMusic.volume = volumeSlider.value;
+        
+        // 音量控制
+        volumeSlider.addEventListener('input', function() {
+            bgMusic.volume = this.value;
+        });
+        
+        // 尝试自动播放音乐
+        function tryAutoPlay() {
+            // 先尝试静音播放（某些浏览器允许）
+            bgMusic.muted = true;
+            const playPromise = bgMusic.play();
+            
+            if (playPromise !== undefined) {
+                playPromise.then(() => {
+                    // 静音播放成功，尝试取消静音
+                    bgMusic.muted = false;
+                    musicToggle.textContent = '🔊 关闭音乐';
+                    musicPlaying = true;
+                    console.log('音乐自动播放成功');
+                }).catch(error => {
+                    // 静音播放也失败，显示提示
+                    console.log('需要用户交互才能播放音乐');
+                    overlay.style.display = 'flex';
+                    bgMusic.muted = false;
+                });
+            }
+        }
+        
+        // 页面加载后尝试自动播放
+        setTimeout(tryAutoPlay, 1000);
+        
+        // 音乐切换按钮事件
+        musicToggle.addEventListener('click', function() {
+            if (musicPlaying) {
+                bgMusic.pause();
+                musicToggle.textContent = '🔇 开启音乐';
+                musicPlaying = false;
+            } else {
+                // 先尝试播放
+                const playPromise = bgMusic.play();
+                
+                if (playPromise !== undefined) {
+                    playPromise.then(() => {
+                        // 播放成功
+                        musicPlaying = true;
+                        musicToggle.textContent = '🔊 关闭音乐';
+                        // 隐藏提示覆盖层（如果还存在）
+                        overlay.style.display = 'none';
+                    }).catch(error => {
+                        // 播放失败，提示用户
+                        console.log('播放失败:', error);
+                        alert('请点击页面任意位置后，再开启音乐');
+                    });
+                }
+            }
+        });
+        
+        // 添加用户交互后尝试播放的机制
+        let userInteracted = false;
+        
+        document.addEventListener('click', function() {
+            if (!userInteracted) {
+                userInteracted = true;
+                console.log('用户已与页面交互，现在可以播放音乐了');
+                
+                // 如果音乐还没播放，尝试播放
+                if (!musicPlaying) {
+                    const playPromise = bgMusic.play();
+                    if (playPromise !== undefined) {
+                        playPromise.then(() => {
+                            musicPlaying = true;
+                            musicToggle.textContent = '🔊 关闭音乐';
+                            overlay.style.display = 'none';
+                        });
+                    }
+                }
+            }
+        });
+        
+        // 添加键盘快捷键：按M键切换音乐
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'm' || event.key === 'M') {
+                musicToggle.click();
+            }
+        });
+    });
+
+    // 飘落图案代码
+    document.addEventListener('DOMContentLoaded', function() {
+        const container = document.getElementById('falling-items');
+        const symbols = ['💖', '🦊','💋','🌹','🍬','👸', '✨', '🎇', '💞','♎', '💕' , '💓', '💗'];
+        const names = ['佳','怡'];
+        
+        // 创建飘落图案元素
+        function createFallingItem() {
+            const item = document.createElement('div');
+            item.classList.add('falling-item');
+            
+            // 随机属性
+            const symbol = symbols[Math.floor(Math.random() * symbols.length)];
+            const size = Math.random() * 20 + 16;
+            const startX = Math.random() * 100;
+            const translateX = (Math.random() > 0.5 ? '-' : '') + (Math.random() * 100 + 30) + 'px';
+            const rotate = (Math.random() * 60 - 30) + 'deg';
+            const duration = Math.random() * 5 + 8;
+            const delay = Math.random() * 5;
+            
+            item.textContent = symbol;
+            item.style.fontSize = `${size}px`;
+            item.style.left = `${startX}vw`;
+            item.style.setProperty('--translate-x', translateX);
+            item.style.setProperty('--rotate', rotate);
+            
+            // 添加动画
+            item.style.animation = `
+                fall ${duration}s ${delay}s linear forwards
+            `;
+            
+            container.appendChild(item);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                item.remove();
+            }, (duration + delay) * 1000);
+        }
+        
+        // 创建飘落文字元素
+        function createFallingText() {
+            const text = document.createElement('div');
+            text.classList.add('falling-text');
+            
+            // 随机属性
+            const name = names[Math.floor(Math.random() * names.length)];
+            const startX = Math.random() * 70 + 15;
+            const translateX = (Math.random() > 0.5 ? '-' : '') + (Math.random() * 50 + 20) + 'px';
+            const rotate = (Math.random() * 20 - 10) + 'deg';
+            const duration = Math.random() * 7 + 10;
+            const delay = Math.random() * 5;
+            
+            text.textContent = name;
+            text.style.left = `${startX}vw`;
+            text.style.setProperty('--translate-x', translateX);
+            text.style.setProperty('--rotate', rotate);
+            
+            // 添加动画
+            text.style.animation = `
+                textFall ${duration}s ${delay}s linear forwards
+            `;
+            
+            container.appendChild(text);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                text.remove();
+            }, (duration + delay) * 1000);
+        }
+        
+        // 初始创建一些图案和文字
+        for (let i = 0; i < 25; i++) {
+            setTimeout(() => createFallingItem(), i * 400);
+            if (i % 5 === 0) {
+                setTimeout(() => createFallingText(), i * 400);
+            }
+        }
+        
+        // 持续创建图案
+        setInterval(createFallingItem, 500);
+        // 持续创建文字
+        setInterval(createFallingText, 2500);
+    });
+
+    // 游戏初始数据 - 修改为文字和图片组合
+    const cardContents = [
+        { text: "心跳异乡", image: "https://i.imgs.ovh/2025/09/01/wLcqU.jpeg" },
+        { text: "共生", image: "https://i.imgs.ovh/2025/09/01/wL4SC.md.jpeg" },
+        { text: "第二粒纽扣", image: "https://i.imgs.ovh/2025/09/01/wRFl4.md.jpeg" },
+        { text: "蒙面感冒侠", image: "https://i.imgs.ovh/2025/09/01/wLO9A.md.jpeg" },
+        { text: "染回黑发时", image: "https://i.imgs.ovh/2025/09/01/wLyv4.md.jpeg" },
+        { text: "清水芙蓉", image: "https://i.imgs.ovh/2025/09/01/wLjZH.md.jpeg" },
+        { text: "密室与艺术展", image: "https://i.imgs.ovh/2025/09/01/wLZpN.md.jpeg" },
+        { text: "从前慢", image: "https://i.imgs.ovh/2025/09/01/wLFbF.md.jpeg" },
+        { text: "十指十色", image: "https://i.imgs.ovh/2025/09/01/wLf4X.jpeg" },
+        { text: "刷刷唰唰", image: "https://i.imgs.ovh/2025/09/01/wLriQ.jpeg" },
+        { text: "yummy~", image: "https://b0.bdstatic.com/ugc/eYp37q7h9Jh42kzKjNVDjQf3428a1eb432c4ab95004642db9156a9.jpg" },
+        { text: "蓝色和橘色", image: "https://i.imgs.ovh/2025/09/01/wTE1Y.jpeg" }, 
+        { text: "小小中国震撼🥁", image: "https://i.imgs.ovh/2025/09/01/wTGtM.md.png" },
+        { text: "灵魂乐章", image: "https://i.imgs.ovh/2025/09/01/wVyv1.jpeg" },
+        { text: "幻昼", image: "https://i.imgs.ovh/2025/09/01/wVVDC.jpeg" },
+        { text: "小孩姐", image: "https://i.imgs.ovh/2025/09/01/wV9D9.jpeg" },
+        { text: "涂涂画画", image: "https://i.imgs.ovh/2025/09/01/wbeRr.jpeg" },
+        { text: "魔法师", image: "https://i.imgs.ovh/2025/09/01/wboRH.jpeg" }
+    ];
+    
+    let cards = [];
+    let flippedCards = [];
+    let matchedPairs = 0;
+    let moves = 0;
+    let gameStarted = false;
+    let startTime;
+    let timerInterval;
+    
+    // 获取DOM元素
+    const gameBoard = document.getElementById('game-board');
+    const restartButton = document.getElementById('restart');
+    const difficultySelect = document.getElementById('difficulty');
+    const movesElement = document.getElementById('moves');
+    const timerElement = document.getElementById('timer');
+    const celebration = document.getElementById('celebration');
+    const celebrationModal = document.getElementById('celebrationModal');
+    const celebrationTime = document.getElementById('celebrationTime');
+    const celebrationMoves = document.getElementById('celebrationMoves');
+    const playAgainButton = document.getElementById('playAgain');
+    const changeDifficultyButton = document.getElementById('changeDifficulty');
+    
+    // 初始化游戏
+    function initGame() {
+        const difficulty = difficultySelect.value;
+        let rows, cols;
+        
+        switch(difficulty) {
+            case 'easy':
+                rows = 2;
+                cols = 2;
+                break;
+            case 'medium':
+                rows = 4;
+                cols = 4;
+                break;
+            case 'hard':
+                rows = 6;
+                cols = 6;
+                break;
+        }
+        
+        // 更新游戏板网格
+        gameBoard.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+        
+        // 生成卡片对
+        const totalPairs = (rows * cols) / 2;
+        const selectedContents = cardContents.slice(0, totalPairs);
+        cards = [...selectedContents, ...selectedContents];
+        
+        // 洗牌算法
+        for (let i = cards.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [cards[i], cards[j]] = [cards[j], cards[i]];
+        }
+        
+        // 创建卡片元素
+        gameBoard.innerHTML = '';
+        cards.forEach((content, index) => {
+            const card = document.createElement('div');
+            card.className = 'card';
+            card.dataset.index = index;
+            card.dataset.content = JSON.stringify(content);
+            
+            const cardInner = document.createElement('div');
+            cardInner.className = 'card-inner';
+            
+            const cardFront = document.createElement('div');
+            cardFront.className = 'card-front';
+            
+            const cardBack = document.createElement('div');
+            cardBack.className = 'card-back';
+            
+            // 添加图片和文字到卡片背面
+            if (content.image) {
+                const img = document.createElement('img');
+                img.src = content.image;
+                img.alt = content.text;
+                img.className = 'card-image';
+                cardBack.appendChild(img);
+            }
+            
+            if (content.text) {
+                const text = document.createElement('div');
+                text.textContent = content.text;
+                text.className = 'card-text';
+                cardBack.appendChild(text);
+            }
+            
+            cardInner.appendChild(cardFront);
+            cardInner.appendChild(cardBack);
+            card.appendChild(cardInner);
+            
+            card.addEventListener('click', () => flipCard(card));
+            gameBoard.appendChild(card);
+        });
+        
+        // 重置游戏状态
+        flippedCards = [];
+        matchedPairs = 0;
+        moves = 0;
+        movesElement.textContent = moves;
+        gameStarted = false;
+        clearInterval(timerInterval);
+        timerElement.textContent = '0';
+        
+        // 隐藏庆祝模态框
+        celebrationModal.classList.remove('show');
+    }
+    
+    // 翻转卡片
+    function flipCard(card) {
+        // 如果卡片已经匹配或已经翻开，则忽略点击
+        if (card.classList.contains('matched') || card.classList.contains('flipped') || flippedCards.length >= 2) {
+            return;
+        }
+        
+        // 开始计时（如果是第一次点击）
+        if (!gameStarted) {
+            startGame();
+        }
+        
+        // 翻转卡片
+        card.classList.add('flipped');
+        flippedCards.push(card);
+        
+        // 如果翻开了两张卡片，检查是否匹配
+        if (flippedCards.length === 2) {
+            moves++;
+            movesElement.textContent = moves;
+            
+            setTimeout(() => {
+                checkForMatch();
+            }, 1000);
+        }
+    }
+    
+    // 检查匹配
+    function checkForMatch() {
+        const [card1, card2] = flippedCards;
+        const content1 = JSON.parse(card1.dataset.content);
+        const content2 = JSON.parse(card2.dataset.content);
+        
+        if (content1.text === content2.text) {
+            // 匹配成功 - 移除flipped类，添加matched类
+             // 匹配成功 - 添加matched类，移除flipped类
+            card1.classList.add('matched');
+            card2.classList.add('matched');
+            
+            // 移除翻转状态，回到正面显示爱心
+            setTimeout(() => {
+                card1.classList.remove('flipped');
+                card2.classList.remove('flipped');
+            }, 300);
+
+            matchedPairs++;
+            
+            // 检查游戏是否结束
+            if (matchedPairs === cards.length / 2) {
+                endGame();
+            }
+        } else {
+            // 不匹配，翻回
+            card1.classList.remove('flipped');
+            card2.classList.remove('flipped');
+        }
+        
+        // 清空已翻开卡片数组
+        flippedCards = [];
+    }
+    
+    // 开始游戏
+    function startGame() {
+        gameStarted = true;
+        startTime = new Date().getTime();
+        
+        timerInterval = setInterval(() => {
+            const currentTime = new Date().getTime();
+            const elapsedTime = Math.floor((currentTime - startTime) / 1000);
+            timerElement.textContent = elapsedTime;
+        }, 1000);
+    }
+    
+    // 结束游戏
+    function endGame() {
+        clearInterval(timerInterval);
+        const elapsedTime = timerElement.textContent;
+        
+        // 创建庆祝效果
+        createCelebration();
+        
+        // 播放胜利音效
+        playWinSound();
+        
+        // 显示庆祝模态框
+        setTimeout(() => {
+            celebrationTime.textContent = elapsedTime;
+            celebrationMoves.textContent = moves;
+            celebrationModal.classList.add('show');
+        }, 1000);
+    }
+    
+    // 播放胜利音效
+    // 这里是实际代码实现
+    const winSound = new Audio();
+    // 由于无法访问您的本地文件，这里使用一个在线MP3示例
+    winSound.src =  "C:/Users/wang/Desktop/流浪艺术家/佳怡和小方/爱情翻翻乐/bgm.mp3";
+    winSound.volume = 0.7;
+        
+        function playWinSound() {
+            try {
+                winSound.currentTime = 0;
+                winSound.play().catch(function(error) {
+                    console.log("音效播放失败: ", error);
+                });
+                console.log("播放胜利音效");
+            } catch (error) {
+                console.error("播放音效时出错:", error);
+            }
+        }
+        
+    // 创建庆祝效果
+    function createCelebration() {
+        celebration.style.display = 'block';
+        celebration.innerHTML = '';
+        
+        const colors = ['#ff0000', '#00ff00', '#0000ff', '#ffff00', '#ff00ff', '#00ffff'];
+        
+        for (let i = 0; i < 100; i++) {
+            const confetti = document.createElement('div');
+            confetti.className = 'confetti';
+            confetti.style.left = Math.random() * 100 + 'vw';
+            confetti.style.backgroundColor = colors[Math.floor(Math.random() * colors.length)];
+            confetti.style.animation = `fall ${Math.random() * 2 + 1}s linear forwards`;
+            
+            celebration.appendChild(confetti);
+            
+            // 动画结束后移除元素
+            setTimeout(() => {
+                confetti.remove();
+            }, 3000);
+        }
+        
+        // 3秒后隐藏庆祝效果
+        setTimeout(() => {
+            celebration.style.display = 'none';
+        }, 3000);
+    }
+
+    // 事件监听
+    restartButton.addEventListener('click', initGame);
+    difficultySelect.addEventListener('change', initGame);
+    playAgainButton.addEventListener('click', initGame);
+    changeDifficultyButton.addEventListener('click', function() {
+        celebrationModal.classList.remove('show');
+        initGame();
+    });
+
+    // 初始化游戏
+    initGame();
+</script>
+</body>
+</html>
